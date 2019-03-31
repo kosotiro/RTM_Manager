@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
       }
       
       initTable(&routing_table);
-      
       FD_ZERO(&readfds);
       FD_SET(client_socket, &readfds);    
       

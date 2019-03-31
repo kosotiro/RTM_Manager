@@ -159,8 +159,7 @@ int main(int argc, char *argv[]) {
       perror("Problem with catching \"SIGINT\"");
       exit(EXIT_FAILURE);
    }
-
-    
+   
    server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 
    if (server_socket == -1) {
@@ -218,9 +217,7 @@ int main(int argc, char *argv[]) {
 
       intit_client_handler_set();
       initTable(&routing_table);
-      
       maxfd = server_socket;
-      
       FD_ZERO(&workingset);
       FD_SET(STDIN_FILENO, &workingset);
       FD_SET(server_socket, &workingset);
@@ -276,8 +273,7 @@ int main(int argc, char *argv[]) {
                 
                  /*send the routing table to all clients*/
                  alignClients(&routing_table, NULL);
-            }
-            
+           }
             if (FD_ISSET(STDIN_FILENO, &workingset)){
                /*input comes from stdin*/
                retval = read(STDIN_FILENO, buffer, BUFFER_SIZE);
