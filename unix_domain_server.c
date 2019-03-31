@@ -79,6 +79,16 @@ static void remove_from_client_handler_set(int skt_fd) {
 }
 
 
+static void close_data_sockets() {
+   int i;
+    
+    for (i=0; i < MAX_CLIENTS_SUPPORTED; i++) {
+      if (client_handles[i] != -1)
+        close(client_handles[i]);
+    }
+}
+
+
 static void alignClients(LinkedList *route_table, sync_msg_t *msg) {
   
   int client, entryidx;
@@ -100,21 +110,20 @@ static void alignClients(LinkedList *route_table, sync_msg_t *msg) {
           if (tableEntry != NULL) {
             message.op_code = CREATE;
             memcpy(&message.msg_body, tableEntry, sizeof(data));
-            if (send(client_handles[client], &message, sizeof(sync_msg_t), 0) > 0)
-              printf("Update client:%d\n", client_handles[client]);
-            else
+            if (send(client_handles[client], &message, sizeof(sync_msg_t), 0) < 0) {
               perror("Send Problem");
+              return;
+            }
           }
         }
         if (listNodeNum(&route_table) > 0)
           client_aligned[client] = true;
       }
       else if (msg != NULL) {
-        printf("print:%s %d %s %s\n", msg->msg_body.destination, msg->msg_body.mask, msg->msg_body.gateway_ip, msg->msg_body.oif);
-        if (send(client_handles[client], msg, sizeof(sync_msg_t), 0) > 0)
-          printf("Update client:%d\n", client_handles[client]);
-        else 
+        if (send(client_handles[client], msg, sizeof(sync_msg_t), 0) < 0) {
           perror("Send Problem");
+          return;
+        }
       }
       else
         return;
@@ -226,6 +235,7 @@ int main(int argc, char *argv[]) {
          if (ready == -1) {
             if (errno !=EINTR) {
                perror("Select Failure");
+               close_data_sockets();
                close(server_socket);
                unlink(socket_address);
                exit(EXIT_FAILURE);
@@ -253,6 +263,8 @@ int main(int argc, char *argv[]) {
                          if (FD_ISSET(fdt, &workingset))
                               close(fdt);
                       }
+                      cleanUpTable(&routing_table);
+                      close_data_sockets();
                       unlink(socket_address);
                       exit(EXIT_FAILURE);
                     }
@@ -260,38 +272,26 @@ int main(int argc, char *argv[]) {
                  }
 
                  add_to_client_handler_set(client_socket);
-                 
-                 printf("soco1:%d\n", client_socket);
-                     
                  } while (client_socket != -1);
-                 
-                 printf("soco2\n");
                 
-                  
                  /*send the routing table to all clients*/
                  alignClients(&routing_table, NULL);
-                  
             }
             
             if (FD_ISSET(STDIN_FILENO, &workingset)){
                /*input comes from stdin*/
                retval = read(STDIN_FILENO, buffer, BUFFER_SIZE);
-               
                if (retval > 0) {
                   /* Remove trailing newline character from the input buffer if needed. */
                   buffer[retval-1] = '\0';
                   TableAction(buffer, &routing_table, &msg);
-                   printf("soco3\n");
-                  
-                  if (msg.op_code != NOOPT) { 
+                  if (msg.op_code != NOOPT) 
                     alignClients(NULL, &msg);
-                    printf("soco4\n");
-                  }
-                  
                }
             }
       }
       /* SIGINT has been received, so perform cleanup actions */
+      cleanUpTable(&routing_table);
       for (fdt = 0; fdt <= maxfd; fdt++) {
          if (FD_ISSET(fdt, &workingset))
             close(fdt);

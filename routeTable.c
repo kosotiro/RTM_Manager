@@ -25,12 +25,18 @@ void TableAction(char *entry, LinkedList *route_table, sync_msg_t *msg)
                  add_Head(&route_table, &msg->msg_body);
                  break;
                case UPDATE:
-                 if (updateEntry(&route_table, msg->msg_body))
+                 if (updateEntry(&route_table, msg->msg_body)) {
                    fprintf(stderr, "Problem with table entry update!");
+                   return;
+                 }
                  break;
                case DELETE:
-                 if (removeEntry(&route_table, msg->msg_body))
+                 printf("client:%s %d %s %s\n", msg->msg_body.destination, msg->msg_body.mask, msg->msg_body.gateway_ip, msg->msg_body.oif);
+                 if (removeEntry(&route_table, msg->msg_body)) {
                    fprintf(stderr, "Problem with table entry removal!");
+                   return;
+                 }
+                 updateAllIds(&route_table);
                  break;
                default:
                  break;
@@ -102,6 +108,7 @@ void TableAction(char *entry, LinkedList *route_table, sync_msg_t *msg)
       if (removeEntry(&route_table, entrydata))
         fprintf(stderr, "Problem with table entry removal!");
       else {
+        updateAllIds(&route_table);
         msg->op_code = DELETE;
         memcpy(&msg->msg_body, &entrydata, sizeof(data));
       }
@@ -123,35 +130,70 @@ void printAllentries(LinkedList *route_table) {
   Node *currentNode;
   int i;
   
+  printf("listNodeNum:%d\n", listNodeNum(&route_table));
+  
   printf("Destination subnet | Gateway IP | OIF\n");
   
   for (i=1; i<=listNodeNum(&route_table); i++) {
     currentNode = getNode(&route_table, i);
+     printf("node:%p\n", currentNode);
+    if (currentNode != NULL) {
     printf("%s/%d\t\t\t %s\t %s\n",currentNode->tabledata->destination, 
            currentNode->tabledata->mask, currentNode->tabledata->gateway_ip,
            currentNode->tabledata->oif);
+    }
   }
     
 }
 
 
+void cleanUpTable(LinkedList *route_table) 
+{
+  Node *tmp, *current;
+  
+  if (route_table->head == NULL) {
+    return;
+  }
+  else if (route_table->head == route_table->tail) {
+    tmp = route_table->head;
+    route_table->head =  route_table->tail = NULL;
+    free(tmp->tabledata);
+    tmp->tabledata = NULL;
+    free(tmp);
+    tmp = NULL;
+  }
+  else {
+    tmp = route_table->head;
+    
+    while(tmp != NULL) {
+      current = tmp;
+      free(current->tabledata);
+      current->tabledata = NULL;
+      free(current);
+      current = NULL;
+      tmp = tmp->next;
+    }
+  }
+}
+
 
 int updateEntry(LinkedList **route_table, data entrydata)
 {
   int i;
-  Node *currentNode;
-  
-  for (i=1; i<=listNodeNum(route_table); i++) {
-    currentNode = getNode(route_table, i);
-    if (!strcmp(currentNode->tabledata->destination, entrydata.destination)
-        && (currentNode->tabledata->mask == entrydata.mask)) {
-      strcpy(currentNode->tabledata->gateway_ip, entrydata.gateway_ip);
-      strcpy(currentNode->tabledata->oif, entrydata.oif);
-      return 0;
-    }
-  }
+  Node *currentnode = (*route_table)->head;
+    
+  while (currentnode != NULL) {
+    if ((!strcmp(currentnode->tabledata->destination, entrydata.destination)) 
+        && (currentnode->tabledata->mask == entrydata.mask)) {
+        strcpy(currentnode->tabledata->gateway_ip, entrydata.gateway_ip);
+        strcpy(currentnode->tabledata->oif, entrydata.oif);
+        return 0;
+      }
+     currentnode = currentnode->next;
+  }    
   
   return 1;
+  
 }
 
 
@@ -177,16 +219,30 @@ int checkForDoubleEntries(LinkedList *route_table, data entrydata)
   }    
   return 1;  
  }
+ 
+ 
+ static void updateAllIds(LinkedList **route_table) {
+   Node *node = (*route_table)->head;
+   int count = 1;
+   
+   printf("Inside updateAllIds\n");
+   
+   while(node != NULL) {
+     node->id = count++;
+     printf("node:%p\n", node);
+     node = node->next;
+   }
+ }
+ 
 
- /* TODO: entry has a bug */
+ 
  int removeEntry(LinkedList **route_table, data entrydata) 
  {
-    
     Node *tmp, *node = (*route_table)->head;
     bool found = false;
     
     while (node != NULL) {
-      if (strcmp(node->tabledata->destination, entrydata.destination) == 0 
+      if (!strcmp(node->tabledata->destination, entrydata.destination) 
           && (node->tabledata->mask == entrydata.mask)) {
         found = true;
         break;
@@ -202,10 +258,13 @@ int checkForDoubleEntries(LinkedList *route_table, data entrydata)
           (*route_table)->head = (*route_table)->head->next;
       }
       else {
-        if (node != NULL) {
-          tmp = node->next;
-          node->next = tmp;
-        }
+        /*You must find the previous node*/
+        tmp = (*route_table)->head;
+        while (tmp != NULL && tmp->next != node) 
+          tmp = tmp->next;
+        
+        if (tmp != NULL)
+          tmp->next = node->next;
       }
     
       free(node->tabledata);

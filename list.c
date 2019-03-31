@@ -6,18 +6,29 @@
 
 void initialize_List(LinkedList **list) 
 {
-
    (*list)->head = NULL;
    (*list)->tail = NULL;
    (*list)->nofids = 0;
 }
 
-void add_Head(LinkedList **list, void *dat) 
+void add_Head(LinkedList **list, data *dat) 
 {
-
+  Node *currentNode, *node;
   if (*list != NULL) {
-    Node *node = (Node *) malloc(sizeof(Node));
+    if (listNodeNum(list) > 0 ) {
+        currentNode = (*list)->head;
+        while (currentNode != NULL && currentNode->next != currentNode) {
+          if ((!strcmp(currentNode->tabledata->destination, dat->destination)) 
+             && (currentNode->tabledata->mask == dat->mask)) {
+            return;
+          }
+          currentNode = currentNode->next;
+        }
+    }
+    
+    node = (Node *) malloc(sizeof(Node));
     node->tabledata = (data *) malloc(sizeof(data));
+    
     
     if (node != NULL && node->tabledata == NULL) {
       perror("Malloc error inside function \"add_Head\" (tabledata element)");
@@ -30,7 +41,7 @@ void add_Head(LinkedList **list, void *dat)
   
     if (node != NULL) {
       memcpy(node->tabledata, dat, sizeof(data));
- 
+      
       if ((*list)->head == NULL) {
         (*list)->tail = node;
         node->next = NULL;

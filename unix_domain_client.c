@@ -57,8 +57,11 @@ int main(int argc, char *argv[]) {
          ready = select(client_socket + 1, &readfds, NULL, NULL, NULL);
           
          if (ready == -1) {
+           printf("Eimai edw\n");
            if (errno !=EINTR) {
              perror("Select Failure");
+             cleanUpTable(&routing_table);
+             close(client_socket);
              exit(EXIT_FAILURE);
            }
            else 
@@ -71,6 +74,8 @@ int main(int argc, char *argv[]) {
              TableAction(NULL, &routing_table, &msg);
            else {
              perror("Problem with data received from server!");
+             cleanUpTable(&routing_table);
+             close(client_socket);
              exit(EXIT_FAILURE);
            }   
          }

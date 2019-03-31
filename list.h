@@ -16,6 +16,6 @@ typedef struct _linkedlist {
 
 /* initialize list */
 void initialize_List(LinkedList **list);
-void add_Head(LinkedList **list, void *data);
+void add_Head(LinkedList **list, data *dat);
 Node *getNode(LinkedList **list, int nodenum);
 int listNodeNum(LinkedList **list);
