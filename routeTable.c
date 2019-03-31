@@ -31,7 +31,6 @@ void TableAction(char *entry, LinkedList *route_table, sync_msg_t *msg)
                  }
                  break;
                case DELETE:
-                 printf("client:%s %d %s %s\n", msg->msg_body.destination, msg->msg_body.mask, msg->msg_body.gateway_ip, msg->msg_body.oif);
                  if (removeEntry(&route_table, msg->msg_body)) {
                    fprintf(stderr, "Problem with table entry removal!");
                    return;
@@ -88,8 +87,9 @@ void TableAction(char *entry, LinkedList *route_table, sync_msg_t *msg)
             memcpy(&msg->msg_body, &entrydata, sizeof(data));
           }
           else {
-            printf("Entry already in the table\n");
+            fprintf(stderr, "Entry already in the table\n");
             msg->op_code = NOOPT;
+            return;
           }
         }
         else {
@@ -129,14 +129,9 @@ void initTable(LinkedList *route_table)
 void printAllentries(LinkedList *route_table) {
   Node *currentNode;
   int i;
-  
-  printf("listNodeNum:%d\n", listNodeNum(&route_table));
-  
   printf("Destination subnet | Gateway IP | OIF\n");
-  
   for (i=1; i<=listNodeNum(&route_table); i++) {
     currentNode = getNode(&route_table, i);
-     printf("node:%p\n", currentNode);
     if (currentNode != NULL) {
     printf("%s/%d\t\t\t %s\t %s\n",currentNode->tabledata->destination, 
            currentNode->tabledata->mask, currentNode->tabledata->gateway_ip,
@@ -224,12 +219,8 @@ int checkForDoubleEntries(LinkedList *route_table, data entrydata)
  static void updateAllIds(LinkedList **route_table) {
    Node *node = (*route_table)->head;
    int count = 1;
-   
-   printf("Inside updateAllIds\n");
-   
    while(node != NULL) {
      node->id = count++;
-     printf("node:%p\n", node);
      node = node->next;
    }
  }

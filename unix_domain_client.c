@@ -48,16 +48,15 @@ int main(int argc, char *argv[]) {
       initTable(&routing_table);
       
       FD_ZERO(&readfds);
-      FD_SET(client_socket, &readfds);
-      printf("Type 'show' to print out routing table:\n");      
+      FD_SET(client_socket, &readfds);    
       
       while(1) {
+         printf("Type 'show' to print out routing table:\n");  
          FD_SET(client_socket, &readfds);
          FD_SET(STDIN_FILENO, &readfds);
          ready = select(client_socket + 1, &readfds, NULL, NULL, NULL);
           
          if (ready == -1) {
-           printf("Eimai edw\n");
            if (errno !=EINTR) {
              perror("Select Failure");
              cleanUpTable(&routing_table);
