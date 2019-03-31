@@ -30,7 +30,8 @@
 #define BUFFER_SIZE 128
 
 static volatile sig_atomic_t keeprunning = 1; /* controlling server process state (running / terminated) */
-int client_handles[MAX_CLIENTS_SUPPORTED+1];
+int client_handles[MAX_CLIENTS_SUPPORTED];
+int client_aligned[MAX_CLIENTS_SUPPORTED];
 
 void sig_handler(int sig) {
     if (sig == SIGINT) {
@@ -45,8 +46,10 @@ static void intit_client_handler_set() {
 
     int i;
     
-    for(i=0; i < MAX_CLIENTS_SUPPORTED; i++)
+    for(i=0; i < MAX_CLIENTS_SUPPORTED; i++) {
       client_handles[i] = -1;
+      client_aligned[i] = false;
+    }
 }
 
 /*Add a new FD to the monitored_fd_set array*/
@@ -88,19 +91,25 @@ static void alignClients(LinkedList *route_table, sync_msg_t *msg) {
   
   for (client = 0; client < MAX_CLIENTS_SUPPORTED; client ++) {
     if (client_handles[client] != -1) { /* valid client */
-      if (route_table != NULL) {
-        for (entryidx = 0; entryidx < listNodeNum(&route_table); entryidx++) {
+      if (route_table != NULL && !client_aligned[client]) {
+        printf("Iam here\n");
+        printf("listNodeNum:%d\n", listNodeNum(&route_table));
+        for (entryidx = 1; entryidx <= listNodeNum(&route_table); entryidx++) {
+          printf("mphka");
           tableEntry = getEntry(&route_table, entryidx);
-          message.op_code = CREATE;
-          memcpy(&message.msg_body, tableEntry, sizeof(data));
-          
-          if (send(client_handles[client], &message, sizeof(sync_msg_t), 0) > 0)
-            printf("Update client:%d\n", client_handles[client]);
-          else
-            perror("Send Problem");
+          if (tableEntry != NULL) {
+            message.op_code = CREATE;
+            memcpy(&message.msg_body, tableEntry, sizeof(data));
+            if (send(client_handles[client], &message, sizeof(sync_msg_t), 0) > 0)
+              printf("Update client:%d\n", client_handles[client]);
+            else
+              perror("Send Problem");
+          }
         }
+        client_aligned[client] = true;
       }
       else {
+        printf("print:%s %d %s %s\n", msg->msg_body.destination, msg->msg_body.mask, msg->msg_body.gateway_ip, msg->msg_body.oif);
         if (send(client_handles[client], msg, sizeof(sync_msg_t), 0) > 0)
           printf("Update client:%d\n", client_handles[client]);
         else 
@@ -248,14 +257,19 @@ int main(int argc, char *argv[]) {
                  }
 
                  add_to_client_handler_set(client_socket);
+                 
+                 printf("soco1:%d\n", client_socket);
                      
                  } while (client_socket != -1);
+                 
+                 printf("soco2\n");
                   
                  /*send the routing table to all clients*/
                  alignClients(&routing_table, NULL);
                   
             }
-            else if (FD_ISSET(STDIN_FILENO, &workingset)){
+            
+            if (FD_ISSET(STDIN_FILENO, &workingset)){
                /*input comes from stdin*/
                retval = read(STDIN_FILENO, buffer, BUFFER_SIZE);
                
@@ -263,9 +277,12 @@ int main(int argc, char *argv[]) {
                   /* Remove trailing newline character from the input buffer if needed. */
                   buffer[retval-1] = '\0';
                   TableAction(buffer, &routing_table, &msg);
+                   printf("soco3\n");
                   
-                  if (msg.op_code != NOOPT) 
+                  if (msg.op_code != NOOPT) { 
                     alignClients(NULL, &msg);
+                    printf("soco4\n");
+                  }
                   
                }
             }

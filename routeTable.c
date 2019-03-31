@@ -14,9 +14,29 @@ void TableAction(char *entry, LinkedList *route_table, sync_msg_t *msg)
     bool error = false;
     int result;
     
-    if (entry == NULL || route_table == NULL) {
-      fprintf(stderr, "Null entry has been given!");
-      return;
+    if (entry == NULL) {
+       if (route_table == NULL) {
+         fprintf(stderr, "Null entry has been given!");
+         return;
+       }
+       else {
+         switch (msg->op_code) {
+               case CREATE:
+                 add_Head(&route_table, &msg->msg_body);
+                 break;
+               case UPDATE:
+                 if (updateEntry(&route_table, msg->msg_body))
+                   fprintf(stderr, "Problem with table entry update!");
+                 break;
+               case DELETE:
+                 if (removeEntry(&route_table, msg->msg_body))
+                   fprintf(stderr, "Problem with table entry removal!");
+                 break;
+               default:
+                 break;
+             }
+          return;
+       }
     }
     
     action = strtok(entry, " ");
@@ -141,7 +161,7 @@ data *getEntry(LinkedList **route_table, int entryidx)
   
   currentNode = getNode(route_table, entryidx);
    
-  return currentNode->tabledata;
+  return (currentNode != NULL) ? currentNode->tabledata : NULL;
 }
 
 int checkForDoubleEntries(LinkedList *route_table, data entrydata)

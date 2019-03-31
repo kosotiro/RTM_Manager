@@ -61,7 +61,7 @@ Node *getNode(LinkedList **list, int nodenum)
   while ((node != NULL) && (nodenum != node->id))
       node = node->next;
   
-  return node;
+  return (nodenum == node->id) ? node : NULL;
 }
 
 

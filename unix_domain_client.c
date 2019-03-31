@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
    int client_socket, ready, retval;
    fd_set readfds;
    sync_msg_t msg;
-   LinkedList routing_table;
    char buffer[BUFFER_SIZE];
+   LinkedList routing_table;
 
    server_address = argv[1];
 
@@ -48,10 +48,10 @@ int main(int argc, char *argv[]) {
       initTable(&routing_table);
       
       FD_ZERO(&readfds);
-      FD_SET(client_socket, &readfds);      
+      FD_SET(client_socket, &readfds);
+      printf("Type 'show' to print out routing table:\n");      
       
       while(1) {
-         printf("Type 'show' to print out routing table:\n");
          FD_SET(client_socket, &readfds);
          FD_SET(STDIN_FILENO, &readfds);
          ready = select(client_socket + 1, &readfds, NULL, NULL, NULL);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
            
          if (FD_ISSET(client_socket, &readfds)) {
            if (recv(client_socket, &msg, sizeof(sync_msg_t), 0) > 0)
-             add_Head((LinkedList **)&routing_table, &msg);
+             TableAction(NULL, &routing_table, &msg);
            else {
              perror("Problem with data received from server!");
              exit(EXIT_FAILURE);
