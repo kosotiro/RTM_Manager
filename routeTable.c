@@ -178,7 +178,7 @@ int checkForDoubleEntries(LinkedList *route_table, data entrydata)
   return 1;  
  }
 
-
+ /* TODO: entry has a bug */
  int removeEntry(LinkedList **route_table, data entrydata) 
  {
     
@@ -212,6 +212,7 @@ int checkForDoubleEntries(LinkedList *route_table, data entrydata)
       node->tabledata = NULL;
       free(node);
       node = NULL;
+      -- (*route_table)->nofids;
     
       return 0;
     }

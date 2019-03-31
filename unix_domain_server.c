@@ -90,12 +90,12 @@ static void alignClients(LinkedList *route_table, sync_msg_t *msg) {
    * ***************************************************/
   
   for (client = 0; client < MAX_CLIENTS_SUPPORTED; client ++) {
-    if (client_handles[client] != -1) { /* valid client */
-      if (route_table != NULL && !client_aligned[client]) {
-        printf("Iam here\n");
-        printf("listNodeNum:%d\n", listNodeNum(&route_table));
+    if (client_handles[client] != -1) { /* valid client ? */
+      if (route_table != NULL && listNodeNum(&route_table)) { /*it is called for BUGGING the server process*/ 
+        if (client_aligned[client]) /*do not repeat alignment for the same client*/
+          continue;
+        /*send all entries to clients*/
         for (entryidx = 1; entryidx <= listNodeNum(&route_table); entryidx++) {
-          printf("mphka");
           tableEntry = getEntry(&route_table, entryidx);
           if (tableEntry != NULL) {
             message.op_code = CREATE;
@@ -106,15 +106,18 @@ static void alignClients(LinkedList *route_table, sync_msg_t *msg) {
               perror("Send Problem");
           }
         }
-        client_aligned[client] = true;
+        if (listNodeNum(&route_table) > 0)
+          client_aligned[client] = true;
       }
-      else {
+      else if (msg != NULL) {
         printf("print:%s %d %s %s\n", msg->msg_body.destination, msg->msg_body.mask, msg->msg_body.gateway_ip, msg->msg_body.oif);
         if (send(client_handles[client], msg, sizeof(sync_msg_t), 0) > 0)
           printf("Update client:%d\n", client_handles[client]);
         else 
           perror("Send Problem");
       }
+      else
+        return;
     }
   }
 }
@@ -263,6 +266,7 @@ int main(int argc, char *argv[]) {
                  } while (client_socket != -1);
                  
                  printf("soco2\n");
+                
                   
                  /*send the routing table to all clients*/
                  alignClients(&routing_table, NULL);
